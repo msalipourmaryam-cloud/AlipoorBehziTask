@@ -50,7 +50,11 @@ var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<AlipoorBehTaskDbContext>();
-    await database.Database.MigrateAsync();
+    if (database.Database.IsRelational())
+        await database.Database.MigrateAsync();
+    else
+        await database.Database.EnsureCreatedAsync();
+
     if (app.Environment.IsDevelopment())
         await scope.ServiceProvider.GetRequiredService<DevelopmentDataSeeder>().SeedAsync();
 }
