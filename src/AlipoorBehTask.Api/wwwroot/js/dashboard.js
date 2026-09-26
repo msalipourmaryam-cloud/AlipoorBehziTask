@@ -146,12 +146,44 @@
         document.querySelector(`#${idPrefix}next${prefix ? "" : "-page"}`).disabled = page >= lastPage;
     }
 
+    function resetBeneficiaryDialog() {
+        const form = document.querySelector("#beneficiary-form");
+        const dialogTitle = document.querySelector("#beneficiary-dialog-title");
+        const submitButton = document.querySelector("[data-beneficiary-submit]");
+        form.reset();
+        form.querySelector("[name=id]").value = "";
+        dialogTitle.textContent = "ثبت مددجو";
+        submitButton.textContent = "ثبت مددجو";
+        clearValidation(form);
+    }
+
+    function openBeneficiaryDialogForEdit(beneficiaryId) {
+        const beneficiary = state.beneficiaries.items.find((item) => item.id === beneficiaryId);
+        if (!beneficiary) return;
+        const form = document.querySelector("#beneficiary-form");
+        const dialogTitle = document.querySelector("#beneficiary-dialog-title");
+        const submitButton = document.querySelector("[data-beneficiary-submit]");
+        form.querySelector("[name=id]").value = beneficiary.id;
+        form.querySelector("[name=nationalId]").value = beneficiary.nationalId;
+        form.querySelector("[name=age]").value = beneficiary.age;
+        form.querySelector("[name=maritalStatus]").value = beneficiary.maritalStatus;
+        form.querySelector("[name=dependentCount]").value = beneficiary.dependentCount;
+        form.querySelector("[name=disabilityType]").value = beneficiary.disabilityType;
+        form.querySelector("[name=monthlyIncome]").value = beneficiary.monthlyIncome;
+        dialogTitle.textContent = "ویرایش مددجو";
+        submitButton.textContent = "ذخیره تغییرات";
+        clearValidation(form);
+        const dialog = document.querySelector("#beneficiary-dialog");
+        dialog.showModal();
+        form.querySelector("[name=nationalId]").focus();
+    }
+
     function renderBeneficiaries() {
         const table = state.beneficiaries;
         document.querySelector("#beneficiary-total").textContent = `${nf.format(table.total)} مددجو`;
         updatePagination("beneficiary", table.page, table.pageSize, table.total);
         if (!table.items.length) {
-            beneficiaryBody.innerHTML = `<tr><td colspan="6"><div class="table-state is-empty"><strong>مددجویی در این فهرست نیست</strong><span>جست‌وجو را تغییر دهید یا مددجوی تازه‌ای ثبت کنید.</span></div></td></tr>`;
+            beneficiaryBody.innerHTML = `<tr><td colspan="7"><div class="table-state is-empty"><strong>مددجویی در این فهرست نیست</strong><span>جست‌وجو را تغییر دهید یا مددجوی تازه‌ای ثبت کنید.</span></div></td></tr>`;
             return;
         }
         beneficiaryBody.innerHTML = table.items.map((item) => `<tr>
@@ -161,6 +193,7 @@
             <td>${nf.format(item.dependentCount)}</td>
             <td>${disabilityNames[item.disabilityType] || escapeHtml(item.disabilityType)}</td>
             <td>${nf.format(item.monthlyIncome)}</td>
+            <td><div class="table-actions"><button type="button" class="table-action" data-beneficiary-edit="${item.id}">ویرایش</button><button type="button" class="table-action delete" data-beneficiary-delete="${item.id}">حذف</button></div></td>
         </tr>`).join("");
     }
 
@@ -400,21 +433,75 @@
     document.querySelectorAll("[data-open]").forEach((button) => button.addEventListener("click", async () => {
         const dialog = document.getElementById(button.dataset.open);
         if (dialog.id === "request-dialog") await loadBeneficiaryOptions();
+        if (dialog.id === "beneficiary-dialog") resetBeneficiaryDialog();
         dialog.showModal();
         dialog.querySelector("input, select, textarea")?.focus();
     }));
     document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
     document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
 
+    beneficiaryBody.addEventListener("click", async (event) => {
+        const editButton = event.target.closest("[data-beneficiary-edit]");
+        const deleteButton = event.target.closest("[data-beneficiary-delete]");
+        if (editButton) {
+            openBeneficiaryDialogForEdit(editButton.dataset.beneficiaryEdit);
+            return;
+        }
+        if (deleteButton) {
+            const beneficiaryId = deleteButton.dataset.beneficiaryDelete;
+            const beneficiary = state.beneficiaries.items.find((item) => item.id === beneficiaryId);
+            if (!beneficiary) return;
+            const confirmed = window.confirm(`آیا از حذف مددجو با کد ملی ${beneficiary.nationalId} مطمئن هستید؟`);
+            if (!confirmed) return;
+            try {
+                await api(`/api/beneficiaries/${encodeURIComponent(beneficiaryId)}`, { method: "DELETE" });
+                announce(`مددجو ${beneficiary.nationalId} حذف شد.`);
+                state.beneficiaries.page = 1;
+                await Promise.all([loadBeneficiaryPage(), loadSummary()]);
+            } catch (error) {
+                announce(`حذف مددجو انجام نشد: ${error.message}`, true);
+            }
+        }
+    });
+
     const beneficiaryForm = document.querySelector("#beneficiary-form");
     beneficiaryForm.addEventListener("input", () => clearValidation(beneficiaryForm));
     beneficiaryForm.addEventListener("change", () => clearValidation(beneficiaryForm));
-    beneficiaryForm.addEventListener("submit", (event) => {
+    beneficiaryForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        submitForm(beneficiaryForm, "/api/beneficiaries", (form) => ({
-            nationalId: form.get("nationalId"), age: Number(form.get("age")), maritalStatus: form.get("maritalStatus"),
-            dependentCount: Number(form.get("dependentCount")), disabilityType: form.get("disabilityType"), monthlyIncome: Number(form.get("monthlyIncome"))
-        }), "مددجو با موفقیت ثبت شد.", async () => { state.beneficiaries.page = 1; await Promise.all([loadBeneficiaryPage(), loadSummary()]); });
+        clearValidation(beneficiaryForm);
+        if (!validateForm(beneficiaryForm)) return;
+        const form = new FormData(beneficiaryForm);
+        const beneficiaryId = form.get("id");
+        const payload = {
+            nationalId: form.get("nationalId"),
+            age: Number(form.get("age")),
+            maritalStatus: form.get("maritalStatus"),
+            dependentCount: Number(form.get("dependentCount")),
+            disabilityType: form.get("disabilityType"),
+            monthlyIncome: Number(form.get("monthlyIncome"))
+        };
+        const submitButton = beneficiaryForm.querySelector("[data-beneficiary-submit]");
+        const originalText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = beneficiaryId ? "در حال ذخیره…" : "در حال ثبت…";
+        try {
+            const url = beneficiaryId ? `/api/beneficiaries/${encodeURIComponent(beneficiaryId)}` : "/api/beneficiaries";
+            const method = beneficiaryId ? "PUT" : "POST";
+            await api(url, { method, body: JSON.stringify(payload) });
+            beneficiaryForm.reset();
+            beneficiaryForm.closest("dialog").close();
+            announce(beneficiaryId ? "تغییرات مددجو با موفقیت ذخیره شد." : "مددجو با موفقیت ثبت شد.");
+            state.beneficiaries.page = 1;
+            await Promise.all([loadBeneficiaryPage(), loadSummary()]);
+        } catch (error) {
+            const errorNode = beneficiaryForm.querySelector("[data-form-error]");
+            errorNode.textContent = error.message;
+            errorNode.hidden = false;
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = originalText;
+        }
     });
 
     const requestForm = document.querySelector("#request-form");

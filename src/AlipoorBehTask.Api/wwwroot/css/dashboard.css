@@ -146,6 +146,11 @@ h1 { margin-bottom: 8px; font: 700 34px/1.25 var(--serif); }
 .table-state.is-empty strong { color: var(--ink); font: 700 17px var(--serif); }
 .table-state.is-empty span { color: var(--muted); }
 .table-state.is-error { color: #843e33; }
+.table-actions { display: flex; align-items: center; gap: 6px; }
+.table-action { min-height: 29px; padding: 0 10px; border: 1px solid var(--line); border-radius: 2px; background: transparent; cursor: pointer; font-size: 10px; }
+.table-action:hover { background: #f0f2ee; }
+.table-action.delete { border-color: #e4c5bf; color: #7f3d35; }
+.table-action.delete:hover { background: #f8efee; }
 .spinner { width: 16px; height: 16px; border: 2px solid #d5e0d9; border-top-color: var(--teal); border-radius: 50%; animation: spin .7s linear infinite; }
 .table-footer { min-height: 70px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
 .pagination { direction: ltr; display: flex; align-items: center; justify-content: center; gap: 11px; }

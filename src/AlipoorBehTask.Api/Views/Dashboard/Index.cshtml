@@ -70,6 +70,7 @@
                             <th scope="col"><button type="button" class="sort-button" data-table-sort="beneficiaries" data-sort-key="dependents">تحت تکفل <span aria-hidden="true">↕</span></button></th>
                             <th scope="col">نوع معلولیت</th>
                             <th scope="col"><button type="button" class="sort-button" data-table-sort="beneficiaries" data-sort-key="income">درآمد ماهانه <span aria-hidden="true">↕</span></button></th>
+                            <th scope="col">اقدام</th>
                         </tr></thead>
                         <tbody id="beneficiary-body"><tr><td colspan="6"><div class="table-state"><span class="spinner" aria-hidden="true"></span>در حال بارگذاری مددجویان…</div></td></tr></tbody>
                     </table>
@@ -128,6 +129,7 @@
 
     <dialog class="form-dialog" id="beneficiary-dialog" aria-labelledby="beneficiary-dialog-title">
         <form id="beneficiary-form" novalidate>
+            <input type="hidden" name="id" value="">
             <div class="dialog-header"><div><span class="section-index">ثبت اطلاعات پایه</span><h2 id="beneficiary-dialog-title">ثبت مددجو</h2></div><button class="icon-button" type="button" data-close aria-label="بستن فرم">×</button></div>
             <p class="dialog-intro">مشخصات را مطابق مدارک هویتی وارد کنید.</p>
             <div class="form-grid">
@@ -139,7 +141,7 @@
                 <label class="form-field"><span>درآمد ماهانه (تومان) <b>*</b></span><input name="monthlyIncome" type="number" min="0" step="any" required placeholder="۰"></label>
             </div>
             <p class="form-error" data-form-error role="alert" hidden></p>
-            <div class="dialog-actions"><button class="button button-quiet" type="button" data-close>انصراف</button><button class="button button-primary" type="submit">ثبت مددجو</button></div>
+            <div class="dialog-actions"><button class="button button-quiet" type="button" data-close>انصراف</button><button class="button button-primary" type="submit" data-beneficiary-submit>ثبت مددجو</button></div>
         </form>
     </dialog>
 
