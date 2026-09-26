@@ -28,6 +28,33 @@ public sealed class ServiceRequestTests
         Assert.Equal(RequestStatus.Pending, request.Status);
     }
 
+    [Fact]
+    public void Update_ChangesBeneficiaryDetails()
+    {
+        var beneficiary = new Beneficiary(new CreateBeneficiaryInput(
+            "0123456789", 35, MaritalStatus.Single, 0, DisabilityType.None, 0));
+
+        beneficiary.Update(new CreateBeneficiaryInput(
+            "9876543210", 42, MaritalStatus.Married, 2, DisabilityType.Severe, 15_000m));
+
+        Assert.Equal("9876543210", beneficiary.NationalId);
+        Assert.Equal(42, beneficiary.Age);
+        Assert.Equal(MaritalStatus.Married, beneficiary.MaritalStatus);
+        Assert.Equal(2, beneficiary.DependentCount);
+        Assert.Equal(DisabilityType.Severe, beneficiary.DisabilityType);
+        Assert.Equal(15_000m, beneficiary.MonthlyIncome);
+    }
+
+    [Fact]
+    public void Update_RejectsInvalidNationalId()
+    {
+        var beneficiary = new Beneficiary(new CreateBeneficiaryInput(
+            "0123456789", 35, MaritalStatus.Single, 0, DisabilityType.None, 0));
+
+        Assert.Throws<DomainRuleException>(() => beneficiary.Update(
+            new CreateBeneficiaryInput("12345", 42, MaritalStatus.Married, 1, DisabilityType.None, 10_000m)));
+    }
+
     private static (Beneficiary Beneficiary, ServiceRequest Request) CreateRequest()
     {
         var beneficiary = new Beneficiary(new CreateBeneficiaryInput(
