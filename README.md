@@ -1,56 +1,166 @@
-﻿# Alipoor beneficiary services API
+﻿# Alipoor BehTask
 
-This .NET 10 solution implements the Persian assignment in `Mid-Level_Test.pdf`. It follows the separation of domain rules, application commands/queries, repositories, persistence, and thin HTTP controllers.
+This project is a .NET 10 service-management application for registering beneficiaries, creating service requests, prioritizing them, and exposing dashboard/report summaries. The solution was built around a clean layered architecture so that business rules remain independent from HTTP concerns, persistence, and UI behavior.
 
-## Structure
+## Why this architecture was chosen
 
-The solution follows project boundaries and folder conventions:
+The application uses a layered, domain-driven structure:
 
-- `src/AlipoorBehTask.Domain/Aggregates`: `IBeneficiary` is the aggregate-root contract; `Beneficiary` owns its `ServiceRequest` children and controls request status changes.
-- `src/AlipoorBehTask.Domain/DTOs`: registration DTO contracts consumed by the aggregate.
-- `src/AlipoorBehTask.Domain/Events`: typed domain events collected by the aggregate.
-- `src/AlipoorBehTask.Domain/IRepositories`: aggregate and event-store repository contracts.
-- `src/AlipoorBehTask.Domain/Tools`: entity/domain-event base contracts, repository, and unit-of-work abstractions.
-- `src/AlipoorBehTask.Application/Commands`, `Handlers`, `Queries`, and `Tools`: explicit write commands, command handlers, read queries, query handlers, event mediator, and handler contracts.
-- `src/AlipoorBehTask.Infrastructure/Models`, `Repositories`, `Extensions`, and `Migrations`: EF Core SQL Server mapping, aggregate and event-log repositories, database registration, and schema history.
-- `src/AlipoorBehTask.Api/Controllers` and `Handlers`: thin HTTP endpoints and application event handlers.
-- `tests/AlipoorBehTask.Tests`: focused domain and application unit tests.
+- Domain layer: holds the business rules, aggregate logic, domain events, validation, and score calculation.
+- Application layer: contains commands, queries, handlers, and orchestration logic.
+- Infrastructure layer: implements persistence, repositories, EF Core mapping, and database setup.
+- API layer: exposes HTTP endpoints and keeps controllers thin.
 
-Service requests are not independent aggregate roots. Creating or changing a request loads and mutates its Beneficiary aggregate; the aggregate enforces the rule and collects its events. Application command handlers dispatch those events through the mediator, event handlers add audit records to the same EF unit of work, and the aggregate plus event log commit together.
+This is a good fit for the project because:
 
-## Implemented behaviors
+- Business rules stay centralized and testable.
+- The logic is not coupled to ASP.NET Core or EF Core.
+- Changes in persistence or API shape do not force business rules to change.
+- It is easier to add unit, integration, and end-to-end tests around the real behavior.
+- The code is easier to extend when new service types, statuses, or reports are introduced.
 
-- Beneficiary registration rejects invalid fields and duplicate normalized national IDs.
-- Service requests start in `Pending` and use controlled service types: `Wheelchair`, `HousingDepositLoan`, and `Pension`.
-- The initial priority score is calculated in the Domain layer and stored when the request is registered. The response also includes the current score, recalculated with waiting time, and a factor-by-factor explanation. Waiting time uses completed calendar months between registration and the current UTC date.
-- The queue orders by score descending, registration date ascending, and request ID ascending, with service/status filtering and bounded pagination.
-- Status transitions are controlled: `Pending` can become `Approved` or `Rejected`; `Approved` can become `Completed`. `Rejected` and `Completed` are terminal.
-- The summary includes every service-type/status combination, including zero counts.
-- Beneficiary and service-request tables use server-side filtering, sorting, counting, and pagination. Request priority sorting is computed in the SQL query before page retrieval.
-- The reports view includes a status bar chart and service-by-status count table.
+## Stack and technology choices
+
+- .NET 10
+- ASP.NET Core Web API
+- Entity Framework Core
+- SQL Server
+- xUnit + WebApplicationFactory
+- Swagger / OpenAPI
+- HTML/CSS/JavaScript dashboard front-end served by the API project
+
+These technologies were selected because they provide a straightforward full-stack backend solution with robust validation, persistence, and local developer workflow support. The stack is simple to run, easy to test, and well suited to a medium-sized internal operational workflow.
+
+## Solution structure
+
+- `src/AlipoorBehTask.Domain`
+  - aggregates and business rules
+  - domain events and validation logic
+  - repository contracts and core abstractions
+- `src/AlipoorBehTask.Application`
+  - commands, queries, handlers, and business workflows
+  - request priority logic and reports orchestration
+- `src/AlipoorBehTask.Infrastructure`
+  - EF Core DbContext and entity configuration
+  - SQL Server repositories and database extensions
+  - data seeding and persistence integration
+- `src/AlipoorBehTask.Api`
+  - controllers, API endpoints, middleware, dashboard views, and static assets
+- `tests/AlipoorBehTask.Tests`
+  - domain tests
+  - integration tests
+  - end-to-end tests
+  - edge-case tests
+
+## Functional requirements and implementation status
+
+| Requirement area | Status | Notes |
+|---|---|---|
+| Beneficiary registration | Implemented | Accepts and validates beneficiary data with duplicate national ID protection. |
+| Beneficiary read/update/delete | Implemented | Supported in API and application handlers. |
+| Service request creation | Implemented | Validates beneficiary, service type, description, and status flow. |
+| Priority calculation | Implemented | Scores are computed in the domain layer with explainable factors. |
+| Queue ordering and pagination | Implemented | Supports sorting, paging, filtering, and deterministic scoring order. |
+| Request status rules | Implemented | Controlled transitions and terminal states are enforced. |
+| Summary reporting | Implemented | Includes service type and status aggregation. |
+| Dashboard drill-down | Implemented | Bar/chart views can drill down by service type and status details. |
+| CRUD UI for beneficiaries | Implemented | Add, edit, and delete flows are present in the dashboard. |
+| Swagger/OpenAPI docs | Implemented | Available in Development. |
+| Authentication and authorization | Missing | Not required for the current scope but important for production deployment. |
+| Notification system | Missing | SMS/email notifications can be added later. |
+| Document uploads | Missing | Not part of the current requirement set. |
+| Payment integration | Missing | Not included in the original scope. |
+| External system integration | Missing | Could be added as a later integration layer. |
+| Containerization / CI pipeline | Missing | Useful for deployment automation and repeatable environment setup. |
+| Advanced analytics dashboards | Missing | Can be added as future reporting improvements. |
+
+## Non-functional requirements
+
+The application is designed to satisfy the core non-functional expectations of the task:
+
+- Business rules are separated from infrastructure and HTTP logic.
+- Validation and domain rules are enforced centrally.
+- API responses are predictable and consistent.
+- Business behavior is covered by automated tests.
+- Data is stored with stable schema and relational constraints.
+- OpenAPI docs are exposed for easier integration and testing.
+- The codebase is modular enough to evolve without major refactors.
+
+## Technical requirements
+
+To build and run the project locally, the following is required:
+
+- .NET 10 SDK
+- Windows or Linux/macOS development machine
+- SQL Server instance available locally or a connection string configured for an alternate server
+- Optional: access to a SQL Server database and local dev environment for the API
+
+## How to build the app
+
+From the solution root:
+
+```powershell
+dotnet restore
+
+dotnet build "src/AlipoorBehTask.Api/AlipoorBehTask.Api.csproj"
+```
+
+## How to run the app
+
+```powershell
+dotnet run --project "src/AlipoorBehTask.Api/AlipoorBehTask.Api.csproj" --urls http://localhost:5080
+```
+
+Then open:
+
+- http://localhost:5080
+- http://localhost:5080/swagger (Development)
+
+## How to test the app
+
+Run the full test suite:
+
+```powershell
+dotnet test "tests/AlipoorBehTask.Tests/AlipoorBehTask.Tests.csproj"
+```
+
+## Tests covered
+
+The project includes the following test types:
+
+- Unit tests for domain validation and score logic
+- Integration tests for API endpoints and persistence flow
+- End-to-end tests for the beneficiary lifecycle across the public API
+- Edge-case tests for invalid enum values, negative income, invalid data boundaries, and status validation behavior
+
+This gives confidence in both business rules and endpoint behavior, while also protecting against regressions in high-risk scenarios.
 
 ## Configuration and assumptions
 
-The assignment does not give a numeric poverty threshold or a currency/unit. `PriorityScoring:PovertyIncomeThreshold` is therefore configurable and currently has the provisional value `10000000`; replace it with the threshold and unit approved by the organization. The same unit must be used for beneficiary monthly income.
+- The application uses a configurable threshold for poverty income comparison.
+- Service requests follow a status lifecycle that allows only valid transitions.
+- Registration dates are assigned on the server side and stored consistently.
+- The default database is expected to be a local SQL Server instance unless overridden by `ConnectionStrings__DefaultConnection`.
+- Development seeding is available for faster local exploration and testing; production should not rely on auto-seeding.
 
-The PDF lists service examples but does not define the transition matrix or waiting-month rounding. This implementation treats each status change as one-way as described above, and counts only completed calendar months. Registration dates are assigned by the server in UTC. The API accepts numeric income with no currency conversion.
+## Benefits of the current implementation
 
-The default connection uses Windows Integrated Authentication against the local SQL Server default instance (`localhost`, database `AlipoorBehTask`). Override `ConnectionStrings__DefaultConnection` for another SQL Server. Schema changes are tracked by EF Core migrations; create and apply later migrations with:
+- Clear separation of concerns.
+- Strong validation at the domain boundary.
+- Better maintainability and safer future changes.
+- Better testability than mixing rules, persistence, and HTTP logic together.
+- Foundation for adding new reporting or business features without rewriting existing flows.
 
-```powershell
-dotnet ef migrations add MigrationName --project AlipoorBehTask/src/AlipoorBehTask.Infrastructure --startup-project AlipoorBehTask/src/AlipoorBehTask.Api --output-dir Migrations
-dotnet ef database update --project AlipoorBehTask/src/AlipoorBehTask.Infrastructure --startup-project AlipoorBehTask/src/AlipoorBehTask.Api
-```
+## Future improvements that can be added later
 
-## API
+- Authentication and authorization
+- Role-based access control
+- Email/SMS notifications
+- Document upload and management
+- Audit history and reporting exports
+- CI/CD pipeline and Docker support
+- Better UX refinements and analytics screens
 
-- `POST /api/beneficiaries`
-- `GET /api/beneficiaries/{id}`
-- `GET /api/beneficiaries?page=1&pageSize=20&search=9000000000&sortBy=nationalId&sortDirection=asc`
-- `POST /api/service-requests`
-- `GET /api/service-requests/{id}`
-- `GET /api/service-requests/queue?page=1&pageSize=20&serviceType=Wheelchair&status=Pending&search=9000000000&sortBy=priority&sortDirection=desc`
-- `PATCH /api/service-requests/{id}/status`
-- `GET /api/reports/requests-summary`
+## Summary
 
-OpenAPI/Swagger is exposed at `/swagger` in Development. SQL Server schema changes are applied from `Infrastructure/Migrations` at startup. In Development, an empty database receives 50 deterministic synthetic beneficiaries and multiple requests per person across every status, so paging and reports have sample content. Production databases are never auto-seeded. No authentication, notifications, document uploads, payments, or external integrations are included, consistent with the assignment scope.
+The application is a working, test-backed service for beneficiary and service-request management with layered architecture, robust domain rules, priority scoring, queue logic, and reporting. It covers the core assignment requirements and leaves room for production hardening and expansion in a clean, maintainable way.
