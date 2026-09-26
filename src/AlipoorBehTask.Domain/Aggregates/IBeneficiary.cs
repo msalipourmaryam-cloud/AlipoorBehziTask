@@ -12,6 +12,7 @@ public interface IBeneficiary : IEntity<Guid>
     DisabilityType DisabilityType { get; }
     decimal MonthlyIncome { get; }
     IReadOnlyCollection<ServiceRequest> Requests { get; }
+    void Update(IBeneficiaryRegistrationDTO registration);
     ServiceRequest AddRequest(IServiceRequestRegistrationDTO request, DateOnly registeredOn, int initialPriorityScore);
     void ChangeRequestStatus(Guid requestId, RequestStatus nextStatus, DateTimeOffset changedAtUtc);
 }

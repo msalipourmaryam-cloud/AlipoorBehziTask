@@ -9,6 +9,8 @@ namespace AlipoorBehTask.Api.Controllers;
 [Route("api/beneficiaries")]
 public sealed class BeneficiariesController(
     ICommandHandler<CreateBeneficiaryCommand, BeneficiaryResponse> createBeneficiary,
+    ICommandHandler<UpdateBeneficiaryCommand, BeneficiaryResponse> updateBeneficiary,
+    ICommandHandler<DeleteBeneficiaryCommand> deleteBeneficiary,
     IQueryHandler<GetBeneficiaryQuery, BeneficiaryResponse> getBeneficiary,
     IQueryHandler<GetBeneficiariesQuery, PagedResult<BeneficiaryResponse>> getBeneficiaries) : ControllerBase
 {
@@ -37,6 +39,31 @@ public sealed class BeneficiariesController(
     {
         var response = await createBeneficiary.HandleAsync(new CreateBeneficiaryCommand(input), cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+    }
+
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType<BeneficiaryResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<BeneficiaryResponse>> Update(
+        Guid id,
+        CreateBeneficiaryInput input,
+        CancellationToken cancellationToken)
+    {
+        var response = await updateBeneficiary.HandleAsync(new UpdateBeneficiaryCommand(id, input), cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        await deleteBeneficiary.HandleAsync(new DeleteBeneficiaryCommand(id), cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("{id:guid}")]

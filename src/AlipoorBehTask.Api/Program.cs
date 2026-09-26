@@ -31,6 +31,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
 builder.Services.AddDbLayer(connectionString);
 builder.Services.AddScoped<ICommandHandler<CreateBeneficiaryCommand, BeneficiaryResponse>, CreateBeneficiaryCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<UpdateBeneficiaryCommand, BeneficiaryResponse>, UpdateBeneficiaryCommandHandler>();
+builder.Services.AddScoped<ICommandHandler<DeleteBeneficiaryCommand>, DeleteBeneficiaryCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<CreateServiceRequestCommand, ServiceRequestResponse>, CreateServiceRequestCommandHandler>();
 builder.Services.AddScoped<ICommandHandler<ChangeServiceRequestStatusCommand>, ChangeServiceRequestStatusCommandHandler>();
 builder.Services.AddScoped<IQueryHandler<GetBeneficiaryQuery, BeneficiaryResponse>, GetBeneficiaryQueryHandler>();

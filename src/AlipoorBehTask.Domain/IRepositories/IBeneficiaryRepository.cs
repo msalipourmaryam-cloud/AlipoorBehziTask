@@ -11,4 +11,5 @@ public interface IBeneficiaryRepository : IRepository<IBeneficiary>
     Task<IReadOnlyList<IBeneficiary>> GetAll(CancellationToken cancellationToken);
     Task<IReadOnlyList<IBeneficiary>> GetMany(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
     void Add(IBeneficiary beneficiary);
+    void Remove(IBeneficiary beneficiary);
 }

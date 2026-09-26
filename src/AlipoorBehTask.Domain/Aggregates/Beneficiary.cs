@@ -17,6 +17,14 @@ public sealed class Beneficiary : Entity<Guid>, IBeneficiary
     public Beneficiary(IBeneficiaryRegistrationDTO registration)
     {
         ArgumentNullException.ThrowIfNull(registration);
+        Update(registration);
+        Id = Guid.NewGuid();
+        AddDomainEvent(new BeneficiaryRegisteredEvent(Id));
+    }
+
+    public void Update(IBeneficiaryRegistrationDTO registration)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
         NationalId = NormalizeNationalId(registration.NationalId);
         Age = registration.Age ?? throw new DomainRuleException("Age is required.");
         MaritalStatus = registration.MaritalStatus ?? throw new DomainRuleException("Marital status is required.");
@@ -34,9 +42,6 @@ public sealed class Beneficiary : Entity<Guid>, IBeneficiary
             throw new DomainRuleException("Disability type is not supported.");
         if (MonthlyIncome < 0)
             throw new DomainRuleException("Monthly income cannot be negative.");
-
-        Id = Guid.NewGuid();
-        AddDomainEvent(new BeneficiaryRegisteredEvent(Id));
     }
 
     public string NationalId { get; private set; }

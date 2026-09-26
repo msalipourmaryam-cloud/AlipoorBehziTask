@@ -47,4 +47,11 @@ public sealed class EfBeneficiaryRepository(AlipoorBehTaskDbContext context) : I
             throw new ArgumentException("Unsupported beneficiary aggregate implementation.", nameof(beneficiary));
         context.Beneficiaries.Add(model);
     }
+
+    public void Remove(IBeneficiary beneficiary)
+    {
+        if (beneficiary is not Beneficiary model)
+            throw new ArgumentException("Unsupported beneficiary aggregate implementation.", nameof(beneficiary));
+        context.Beneficiaries.Remove(model);
+    }
 }
